@@ -1,0 +1,19 @@
+extends layout
+
+block content
+  h1= title
+  form(action="/upload-files" enctype="multipart/form-data" method="POST")
+    input(type="hidden" name="code" value=code)
+    table: tbody
+      tr
+        th 件名
+        td: input(type="text" name="subject" required)
+      tr
+        th 件名(パスワード送付)
+        td: input(type="text" name="subject-pw" value="【PW】" required)
+      tr
+        td
+        td: input(type="file" name="files" multiple required)
+      tr
+        td
+        td: button(type="submit") かける！
