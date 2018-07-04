@@ -62,23 +62,24 @@ router.post('/upload-files', upload.array('files'), function(req, res, next) {
         path.extname(req.files[0].originalname))) + '.zip';
 
   const boundary = '=_Kaien315114194';
-  let body = `Subject: =?UTF-8?B?${b64(req.body.subject)}?=
+  let buf = Buffer.from(`Subject: =?UTF-8?B?${b64(req.body.subject)}?=
 Content-Type: multipart/mixed; boundary="${boundary}"
 
 --${boundary}
 Conent-Type: text/plain; charset="UTF-8";
 Content-Transfer-Encoding: base64
 
-パスワードは別メールでお送りいたします。\n`;
-
-  body += `--${boundary}
+パスワードは別メールでお送りいたします。
+--${boundary}
 Content-Type: application/zip; name="=?UTF-8?B?${attachmentName}?="
-Content-Transfer-Encoding: base64
+Content-Transfer-Encoding: base64\n\n`);
+  buf = Buffer.concat([
+    buf,
+    Buffer.from(mz.zip().toString('base64')),
+    Buffer.from(`--${boundary}--\n`)
+  ]);
 
-${mz.zip().toString('base64')}
---${boundary}--\n`;
-
-  const b64ed = b64(body);
+  const b64ed = b64(buf);
   const b64ed2 = b64(`Subject: =?UTF-8?B?${b64('【PW】' + req.body.subject)}?=
 
 別メールにて送信した添付ファイルのパスワードは
