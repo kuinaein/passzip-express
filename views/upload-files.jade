@@ -9,8 +9,10 @@ block content
         th 件名
         td: input(type="text" name="subject" required)
       tr
-        th 件名(パスワード送付)
-        td: input(type="text" name="subject-pw" value="【PW】" required)
+        th 添付ファイル名
+          br
+          span ※省略時は第1ファイル名
+        td: input(type="text" name="fname")
       tr
         td
         td: input(type="file" name="files" multiple required)
