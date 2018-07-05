@@ -9,7 +9,7 @@ const URLSafeBase64 = require('urlsafe-base64');
 const multer = require('multer');
 const { google } = require('googleapis');
 const Minizip = require('minizip-asm.js');
-const randomNumber = require("random-number-csprng");
+const randomNumber = require('random-number-csprng');
 
 const clientSecret = require('./client-secret.json').web;
 
@@ -53,7 +53,7 @@ function generatePassword () {
 // 6ビットのデータをbase64エンコードすると8ビット(1文字)になるので
 const PWD_BLOCK_MAX = Math.pow(8, 6) - 1;
 function _generatePassword8 (s) {
-  // Math.pow(64, 6) < Number.MAX_SAFE_INTEGER
+  // Math.pow(8, 6) < Number.MAX_SAFE_INTEGER
   return randomNumber(0, PWD_BLOCK_MAX).then(n => {
     const ar = [];
     for (let i = 0; i < 6; ++i) {
