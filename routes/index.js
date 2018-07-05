@@ -44,7 +44,7 @@ function b64 (s) {
   return URLSafeBase64.encode(b)
 }
 
-// 12バイト(=48ビット)のデータをbase64エンコードすると16文字になる
+// 12バイト(=96ビット)のデータをbase64エンコードすると16文字になる
 // 6ビットのデータをbase64エンコードすると1文字(8ビット)になるので
 function generatePassword () {
   return new Promise((resolve, reject) => {
