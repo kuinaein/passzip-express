@@ -9,6 +9,7 @@ const router = express.Router();
 const URLSafeBase64 = require('urlsafe-base64');
 const multer = require('multer');
 const { google } = require('googleapis');
+const iconv = require('iconv-lite');
 const Minizip = require('minizip-asm.js');
 
 const clientSecret = require('./client-secret.json').web;
@@ -64,7 +65,8 @@ router.post('/upload-files', upload.array('files'), function(req, res, next) {
   generatePassword().then(password => {
     const mz = new Minizip();
     for (const f of req.files) {
-      mz.append(f.originalname, f.buffer, { password })
+      mz.append(iconv.encode(f.originalname, 'Windows932'),
+        f.buffer, { password })
     }
     const attachmentName = (req.body.fname ||
         path.basename(req.files[0].originalname,
@@ -80,7 +82,7 @@ Content-Transfer-Encoding: base64
 
 パスワードは別メールでお送りいたします。
 --${boundary}
-Content-Type: application/zip; name="=?UTF-8?B?${attachmentName}?="
+Content-Type: application/zip; name="=?UTF-8?B?${b64(attachmentName)}?="
 Content-Transfer-Encoding: base64\n\n`);
     buf = Buffer.concat([
       buf,

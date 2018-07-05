@@ -11,6 +11,7 @@
     "express": "~4.16.0",
     "googleapis": "^32.0.0",
     "http-errors": "~1.6.2",
+    "iconv-lite": "^0.4.23",
     "jade": "~1.11.0",
     "minizip-asm.js": "^1.0.10",
     "morgan": "~1.9.0",
