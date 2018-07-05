@@ -9,10 +9,9 @@ const URLSafeBase64 = require('urlsafe-base64');
 const multer = require('multer');
 const { google } = require('googleapis');
 const Minizip = require('minizip-asm.js');
-const MersenneTwister = require('mersenne-twister');
+const randomNumber = require("random-number-csprng");
 
 const clientSecret = require('./client-secret.json').web;
-const ALNUM = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
 const upload = multer();
 
@@ -44,25 +43,44 @@ function b64 (s) {
   return URLSafeBase64.encode(b)
 }
 
+function generatePassword () {
+  return _generatePassword8('').then(pw => {
+    return _generatePassword8(pw);
+  });
+}
+
+// 6バイトのデータをbase64エンコードすると8バイトになる
+// 6ビットのデータをbase64エンコードすると8ビット(1文字)になるので
+const PWD_BLOCK_MAX = Math.pow(8, 6) - 1;
+function _generatePassword8 (s) {
+  // Math.pow(64, 6) < Number.MAX_SAFE_INTEGER
+  return randomNumber(0, PWD_BLOCK_MAX).then(n => {
+    const ar = [];
+    for (let i = 0; i < 6; ++i) {
+      ar.push(n % 8);
+      n = Math.floor(n / 8);
+    }
+    return s + Buffer.from(ar).toString('base64');
+  });
+}
+
 router.post('/upload-files', upload.array('files'), function(req, res, next) {
-  const generator = new MersenneTwister();
-  let password = '';
-  for (let i = 0; i < 13; ++i) {
-    // 出力値は[0,1) の半開区間であるはずだが念の為minをかます
-    password += ALNUM.charAt(Math.min(ALNUM.length - 1,
-      Math.floor(generator.random() * ALNUM.length)));
-  }
+  const result = {};
+  const auth = createGoogleAuth(req.hostname);
+  const gmail = google.gmail({version: 'v1', auth})
+  let b64ed;
+  let b64ed2;
+  generatePassword().then(password => {
+    const mz = new Minizip();
+    for (const f of req.files) {
+      mz.append(f.originalname, f.buffer, { password })
+    }
+    const attachmentName = (req.body.fname ||
+        path.basename(req.files[0].originalname,
+          path.extname(req.files[0].originalname))) + '.zip';
 
-  const mz = new Minizip();
-  for (const f of req.files) {
-    mz.append(f.originalname, f.buffer, { password })
-  }
-  const attachmentName = (req.body.fname ||
-      path.basename(req.files[0].originalname,
-        path.extname(req.files[0].originalname))) + '.zip';
-
-  const boundary = '=_Kaien315114194';
-  let buf = Buffer.from(`Subject: =?UTF-8?B?${b64(req.body.subject)}?=
+    const boundary = '=_Kaien315114194';
+    let buf = Buffer.from(`Subject: =?UTF-8?B?${b64(req.body.subject)}?=
 Content-Type: multipart/mixed; boundary="${boundary}"
 
 --${boundary}
@@ -73,24 +91,22 @@ Content-Transfer-Encoding: base64
 --${boundary}
 Content-Type: application/zip; name="=?UTF-8?B?${attachmentName}?="
 Content-Transfer-Encoding: base64\n\n`);
-  buf = Buffer.concat([
-    buf,
-    Buffer.from(mz.zip().toString('base64')),
-    Buffer.from(`--${boundary}--\n`)
-  ]);
+    buf = Buffer.concat([
+      buf,
+      Buffer.from(mz.zip().toString('base64')),
+      Buffer.from(`--${boundary}--\n`)
+    ]);
 
-  const b64ed = b64(buf);
-  const b64ed2 = b64(`Subject: =?UTF-8?B?${b64('【PW】' + req.body.subject)}?=
+    b64ed = b64(buf);
+    b64ed2 = b64(`Subject: =?UTF-8?B?${b64('【PW】' + req.body.subject)}?=
 
 別メールにて送信した添付ファイルのパスワードは
 「${password}」
 になります。
 `);
 
-  const result = {};
-  const auth = createGoogleAuth(req.hostname);
-  const gmail = google.gmail({version: 'v1', auth})
-  auth.getToken(req.body.code).then(r => {
+    return auth.getToken(req.body.code);
+  }).then(r => {
     auth.credentials = r.tokens
     return gmail.users.drafts.create({
       userId: 'me',
