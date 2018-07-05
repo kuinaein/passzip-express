@@ -1,6 +1,7 @@
 'use strict';
 
 const path = require('path');
+const crypto = require('crypto');
 
 const express = require('express');
 const router = express.Router();
@@ -9,7 +10,6 @@ const URLSafeBase64 = require('urlsafe-base64');
 const multer = require('multer');
 const { google } = require('googleapis');
 const Minizip = require('minizip-asm.js');
-const randomNumber = require('random-number-csprng');
 
 const clientSecret = require('./client-secret.json').web;
 
@@ -43,25 +43,16 @@ function b64 (s) {
   return URLSafeBase64.encode(b)
 }
 
+// 12バイト(=48ビット)のデータをbase64エンコードすると16文字になる
+// 6ビットのデータをbase64エンコードすると1文字(8ビット)になるので
 function generatePassword () {
-  return _generatePassword8('').then(pw => {
-    return _generatePassword8(pw);
-  });
-}
-
-// 6バイトのデータをbase64エンコードすると8バイトになる
-// 6ビットのデータをbase64エンコードすると8ビット(1文字)になるので
-const PWD_BLOCK_MAX = Math.pow(8, 6) - 1;
-function _generatePassword8 (s) {
-  // Math.pow(8, 6) < Number.MAX_SAFE_INTEGER
-  return randomNumber(0, PWD_BLOCK_MAX).then(n => {
-    const ar = [];
-    for (let i = 0; i < 6; ++i) {
-      ar.push(n % 8);
-      n = Math.floor(n / 8);
+  return new Promise((resolve, reject) => {
+    try {
+      resolve(Buffer.from(crypto.randomBytes(12)).toString('base64'));
+    } catch(err) {
+      reject(err);
     }
-    return s + Buffer.from(ar).toString('base64');
-  });
+  })
 }
 
 router.post('/upload-files', upload.array('files'), function(req, res, next) {
